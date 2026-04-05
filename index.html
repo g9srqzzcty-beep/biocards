@@ -53,6 +53,8 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 .pc{background:rgba(92,96,128,.15);color:var(--text3)}
 .deck-bar{height:4px;background:var(--surface3);border-radius:4px;overflow:hidden}
 .deck-bar-fill{height:100%;background:var(--accent);border-radius:4px;transition:width .4s}
+.copy-deck-btn{margin-top:10px;width:100%;padding:7px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text2);font-size:.75rem;cursor:pointer;text-align:center}
+.copy-deck-btn:hover{background:var(--surface3);color:var(--text)}
 
 /* PROGRESS PAGE */
 #progress-page h2{font-size:1.3rem;font-weight:700;margin-bottom:20px}
@@ -416,7 +418,8 @@ function buildDashboard(){
         ${dd>0?`<span class="pill pd">${dd} due</span>`:''}
         ${dn2+dl+dd===0?`<span class="pill pc">✓ done</span>`:''}
       </div>
-      <div class="deck-bar"><div class="deck-bar-fill" style="width:${pct}%"></div></div>`;
+      <div class="deck-bar"><div class="deck-bar-fill" style="width:${pct}%"></div></div>
+      <button class="copy-deck-btn" data-deck="${dn.replace(/"/g,'&quot;')}" onclick="event.stopPropagation();copyDeck(this.dataset.deck)">📋 Copy for AI teaching</button>`;
     el.onclick=()=>startDeck(dn);
     grid.appendChild(el);
   });
@@ -714,6 +717,50 @@ document.addEventListener('keydown',e=>{
     else if(e.key==='4') grade(3);
   }
 });
+
+// ============================================================
+// COPY DECK FOR AI TEACHING
+// ============================================================
+function copyDeck(dn){
+  const cards = DECKS[dn];
+  let text = 'I am a first year TCD biology student. Before I do my flashcards, explain this topic to me in plain English — a clear 5 minute overview of the key concepts and how they connect. The topic is: ' + dn + '\n\nHere are the cards (' + cards.length + ' total):\n\n';
+  cards.forEach((c,i)=>{
+    text += 'Q' + (i+1) + ': ' + c.f + '\nA: ' + c.b + '\n\n';
+  });
+  // Fallback copy method that works on local files (no HTTPS needed)
+  const btn = event.target;
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0';
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    const orig = btn.textContent;
+    btn.textContent = '✓ Copied! Paste into new chat';
+    btn.style.color = 'var(--green)';
+    setTimeout(()=>{ btn.textContent=orig; btn.style.color=''; }, 3000);
+  } catch(e) {
+    // Last resort: show in a popup they can manually copy
+    const orig = btn.textContent;
+    btn.textContent = 'See below — select all & copy';
+    btn.style.color = 'var(--yellow)';
+    setTimeout(()=>{ btn.textContent=orig; btn.style.color=''; }, 4000);
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.cssText = 'position:fixed;top:10%;left:5%;width:90%;height:80%;z-index:9999;background:#1a1d27;color:#e8eaf6;font-size:12px;padding:12px;border:2px solid #7c83e0;border-radius:10px';
+    ta.onclick = ()=>ta.select();
+    document.body.appendChild(ta);
+    ta.select();
+    const closeBtn = document.createElement('button');
+    closeBtn.textContent = '✕ Close';
+    closeBtn.style.cssText = 'position:fixed;top:8%;right:7%;z-index:10000;background:#e06c75;color:#fff;border:none;padding:8px 16px;border-radius:8px;cursor:pointer;font-size:14px';
+    closeBtn.onclick = ()=>{ document.body.removeChild(ta); document.body.removeChild(closeBtn); };
+    document.body.appendChild(closeBtn);
+  }
+}
 
 // ============================================================
 // SYNC
